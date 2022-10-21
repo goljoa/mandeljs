@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<meta charset="utf-8" />
+	<title>Web Mandelbrot</title>
+	<style type="text/css">
+		
+		body { margin: 0; overflow: hidden }
+		
+		p { margin: 10px 0 }
+		
+		a { color: #bbf }
+		
+		nav { position: absolute; right: 0; top: 0;
+			width: 350px; background: #000;
+			opacity: 0.7; padding: 10px 10px; color: #fff;
+			font-family: monospace; font-size: 8pt; }
+		
+		debug { position: absolute; left: 0; top: 0px;
+			width: 300px; background: #000;
+			opacity: 0.7; padding: 10px 10px; color: #fff;
+			font-family: monospace; font-size: 8pt ; display : none;}
+		
+		panel { position: absolute; right: 0px; top: 300px;
+			width: 350px; background: #000;
+			opacity: 0.7; padding: 10px 10px; color: #fff;
+			font-family: monospace; font-size: 8pt; display : none; }
+		
+		panel2 { position: absolute; right: 0px; top: 360px;
+			width: 350px; background: #000;
+			opacity: 0.7; padding: 10px 10px; color: #fff;
+			font-family: monospace; font-size: 8pt; display : none; }
+		
+		div#error { position: absolute; width: 30%; left: 35%;
+			top: 50%; padding: 10px; border: 1px solid #633;
+			background: #fdd; margin-top: -50px;
+			font-size: 16px; font-weight: bold; color: #422 }
+			
+		div#stop { display : none;}	
+		
+		input[type=text]
+		{
+		    background-color: transparent; border:solid 1px white; color: #979797;
+		    height: 18px; padding: 2px; width: 50px; display : block;
+		   	font-family: monospace; font-size: 8pt; 
+		}
+		input[type=submit]
+		{
+		    background-color: transparent; border:solid 1px #000; color: #fff;
+		    height: 28px; padding-left:0px;  
+		    text-align : center;
+		    font-family: monospace; font-size: 8pt; width:100% }
+		 
+		 input[type=reset]
+		{
+		    background-color: transparent; border:solid 1px #000; color: #fff;
+		    height: 28px; padding-left:0px;  
+		    text-align : center;
+		    font-family: monospace; font-size: 8pt; width:100% }
+		
+		input[type=submit]:hover, input[type=reset]:hover
+		{	border:solid 1px red; 
+			font-family: monospace; font-size: 8pt; }
+		
+		input[type=submit]:active, input[type=reset]:active
+		{ 	background-color: red;
+			font-family: monospace; font-size: 8pt; }
+		
+		
+	</style>
+</head>
+
+<body onload="doall(event, 0); return false;" >
+ 	
+	<canvas id="view" 	ondblclick="doall(event, 1); return false;"
+						onmousemove="javascript:mousepos(event);"></canvas>
+	<div id="error">
+		Error: This application requires JavaScript and html5 canvas support to run.
+	</div>
+	<debug id = "debug"  onmousemove="javascript:mousepos(event);">
+		
+		
+		<p>
+			CONSOLE: <a href="#" onclick="javascript:clearconsole(2);">clear</a>
+			| <a href="#" onclick="javascript:clearconsole(0);">clear first</a>
+			| <a href="#" onclick="javascript:clearconsole(1);">clear last</a>
+			
+			<br /><br />  
+			
+			<div align="right" onmousemove="javascript:mousepos(event);">
+				x : <span id="mousex"></span> |	y : <span id="mousey"></span>
+			</div>
+		
+		</p>
+ 	</debug>
+	<nav 	onmousemove="javascript:mousepos(event);">
+		<p>
+			EXPLORE THE MANDELBROT SET UNDER QUADRATIC POLYNOMIA 
+		</p>
+		<p>
+			Double-click any point to zoom in, click near sides to zoom out. <span id="info"></span>
+		</p>
+		<p align = center>
+		<br />
+		<span id="setdebug"></span> | <span id="setpanel"></span>
+		</p>
+		<p align="left">
+		<br />
+			Do the same with <a href="./julia.html">JULIA SETS UNDER QP</a>
+		</p>
+		<p >
+			<br />Some explanations : <a href = "http://www.gvp.cz/~vinkle/mafynet/GeoGebra/matematika/fraktaly/linearni_system/julia.pdf" target =_blank>here</a> & 
+			<a href="http://www.jimrolf.com/explorationsInComplexVariables/bookChapters/Ch1.pdf" target=_blank>here</a>
+		</p>
+		<br />
+		<br />
+		<div id="loading"></div>
+		<div id="stop"><a href="#" onclick="javascript:stopdrawing=1;">Stop fine drawing</a></div>
+		
+	</nav>
+	
+	<form id="panelform" onsubmit="doall(0, 0); return false;">
+ 	
+ 	<panel id="panel">
+ 	    	<table width=100%>
+ 	    		<tr>
+ 	    			<td width=33%>Number of iterations </td>
+ 	    			<td><input type = "text" name="iterations" value = "10000" autocomplete="off"> </td>
+ 	    			<td><input type = "submit" value="Redraw !"></td>
+ 	    		</tr>
+ 	    	</table>
+ 	</panel>
+ 	
+ 	<panel2 id="panel2">
+ 	    	<table width=100%>
+ 	    		<tr>
+ 	    			<td width=33%>Zoom factor</td>
+ 	    			<td><input type = "text" name ="zoomfactor" value=2.5 autocomplete="off"></td>
+ 	    			<td><input type = "reset" onclick="history.go(0)" value="Reset all"></td>	
+ 	    		</tr>
+ 	  
+ 	    	</table>
+ 	   
+ 	</panel2>
+ 	</form>
+
+	<script>
+	
+
+	
+	checkCan() ;
+    displayDebugControl(1);
+    displaypanel(1);
+  
+	if(!gx){
+		var gx = 0 ;
+    	var gy = 0 ;
+    	var t = new Date() ;
+    	debug ("Script initialization on "+t+"... ok.");
+    }
+    
+    if(!zoom){
+    	var zoom = 1 ;
+	}
+	
+	var width = getSize().width;
+	var height = getSize().height;
+	
+	var min = Math.min(width, height);
+    var can = document.getElementById("view") ;
+	can.width = width;
+	can.height = height
+    
+	var ctx = document.getElementById("view").getContext("2d");
+	var img = ctx.getImageData(0,0, getSize().width, getSize().height);
+	var pix = img.data; 
+	   
+	var load = document.getElementById("loading") ;
+	var stop = document.getElementById("stop");
+	var f = document.getElementById("panelform");
+
+	var stopdrawing = 0 ;
+
+
+    function doall(event, zoomer){
+        
+        drawLines(event, zoomer, 20, 0); 
+		drawLines(250, 0, 5, 0); 
+	   	drawLines(250, 0, 1, 0);
+	   	return false;
+        
+    }
+
+	function drawLines(event, zoomer, thickness, line){
+	
+			var img = Mandelbrot(event, zoomer, thickness, line) ;
+			ctx.putImageData(img, 0, 0);
+
+			load.style.display = "block";
+			if(line <= height && !(window.stopdrawing == 1 && thickness == 1)){
+				
+				if(line<1){
+					exectime = new Date().getTime() ;
+					if (thickness == 1){
+						debug("-");
+						debug("zoom "+ zoom+" | iterations "+ iterations);
+						
+					}
+					
+				}
+				line += thickness;
+				setTimeout('drawLines(0,0,'+thickness+','+line+');', -1);
+				//drawLines(0,0, thickness, line);
+				if(thickness == 1){
+					var pc = Math.round(line*100/height) ;
+					//load.innerHTML = "Loading... line n°"+line+" | "+pc+"% done";
+					load.innerHTML = "Drawing it nice and fine... | "+pc+"% done";
+					stop.style.display = "block";
+				}
+			}else{
+				
+				load.style.display = "none";
+				stop.style.display = "none";
+				exectime2 = new Date().getTime() - exectime;
+				debug("line size "+ thickness+"px - "+exectime2/1000+" sec.") ;
+			    stopdrawing = 0 ;
+
+			}
+		
+			
+	}
+   
+   
+   
+	function Mandelbrot(event, zoomer, thickness, line){
+	
+        var zoom_val = 1 ;
+        var reversezoom = 0 ;
+        
+        var mx = 0 ;
+	    var my = 0 ;
+
+
+	    if(zoomer == 1){
+	    	if(f.zoomfactor.value){
+	    		zoom_val = parseFloat(f.zoomfactor.value) ;
+	    	}else{
+	      		zoom_val = 2.5 ;
+	    	}
+	    }else{
+	    	var zoom_val = 1 ;
+	    }
+	   
+
+	    if(event.clientX && event.clientY){
+	    	var ixse = event.clientX ;
+	    	var igrec = event.clientY ;
+	    	if (ixse < 51 || ixse > width-50|| igrec < 50 || igrec > height-50){
+	    		zoom_val = 1/zoom_val ;
+	    		reversezoom = 1 ;
+	    	}else{
+	    		reversezoom = 0 ;
+	    	}
+	    	
+	    }
+	    
+	    zoom = zoom*zoom_val;
+
+	    var xmin =-2/zoom;
+	    var xmax = 2/zoom;
+	    var ymin = -2/zoom;
+	    var ymax = 2/zoom;
+	    
+
+	    if(event.clientX && event.clientY ){ 
+
+			if(reversezoom == 0){
+				var cx = event.clientX - width/(4.33*zoom_val) ;
+	        	var cy = event.clientY ;
+			}else{
+				var cx = width/2 - width/(4*zoom_val) ;
+				var cy = height/2 ;
+			}
+	  
+			mx = 2*(2*cx-min)/(zoom*min)
+			my = 2*(min-2*cy)/(zoom*min)
+			
+			
+			mx = mx*zoom_val;
+			my = my*zoom_val; 
+	
+	    }
+
+		xmin = (xmin + mx + gx);
+		xmax = (xmax + mx + gx);
+		ymin = (ymin - my - gy);
+		ymax = (ymax - my - gy);
+
+	    gx = (gx + mx) ;
+	    gy = (gy + my) ; 
+	    
+	    
+	    if(f.iterations.value){
+	    	iterations = parseFloat(f.iterations.value) ;
+	    }else{
+	      	iterations = 1000 ;
+	    }
+
+	    /* 
+    	Reprise de l'agorithme de coloration du "rosetta code"
+    	http://rosettacode.org/wiki/Mandelbrot_set#JavaScript
+    	*/
+
+		var y = ymin + (ymax-ymin)*line/(min - 1) ;
+	    
+	    for (var ix = 0; ix < width; ix+=thickness){
+	      
+	    
+			    var x = xmin + (xmax-xmin)*ix/(min - 1) - 2 ;
+			    var i = Mandeliter(x, y, iterations);
+			    
+			     
+			    for(var j = 0; j<thickness ; j +=1){
+                    for(var k = 0; k<thickness ; k+=1){
+			            
+			            var ppos = 4*(width*(line+j-1) + ix+k-1);
+			     
+			            if (i == iterations){
+			            
+			                pix[ppos] = 0;
+			                pix[ppos+1] = 0;
+			                pix[ppos+2] = 0;
+			            
+			            }else{
+			                var c = 3*Math.log(i)/Math.log(iterations - 1.0);
+			                
+			                if (c < 1){
+			                
+			                    pix[ppos] = 255*c;
+			                    pix[ppos+1] = 0;
+			                    pix[ppos+2] = 0;
+			                
+			                }else if (c < 2){
+			                
+			                    pix[ppos] = 255;
+			                    pix[ppos+1] = 255*(c-0.9);
+			                    pix[ppos+2] = 0;
+			                
+			                }else{
+			                    
+			                    pix[ppos] = 255;
+			                    pix[ppos+1] = 255;
+			                    pix[ppos+2] = 255*(c-1.9);
+			                }
+			            } 
+			      
+			            pix[ppos+3] = 255; 
+			    }
+	    	}
+	    }
+
+    return img ;
+   
+	}
+	
+
+	/*-------------------
+	-- Functions, etc. --
+	-------------------*/
+	
+	function checkCan(){
+		document.getElementById("error").style.display = "none";
+		if(!document.createElement('canvas').getContext){
+			document.getElementById("error").style.display = "block";
+		}
+	}
+	
+	
+	function getSize(){
+		var w = window.innerWidth ;
+		var h = window.innerHeight ;
+	    var ret = {height:h, width:w} ;
+	    return ret ;
+	}
+	
+	
+	function debug(txt){
+		var d = new Date();
+		var n = document.createElement("span") ;
+		n.innerHTML = "#"+d.getTime()+" \t"+txt+"<br />" ;
+		var debug = document.getElementsByTagName("debug")[0];
+		debug.appendChild(n) ;
+	}
+	
+	
+	function displayDebugControl(int){
+	    var setd = document.getElementById('setdebug') ;
+	    if(int == 1){
+	        setd.innerHTML = '<a href="#" onclick="javascript:setdebug(1); return false;">Show console</a>';
+	    }else{
+	        setd.innerHTML = '<a href="#" onclick="javascript:setdebug(0); return false;">Hide console</a>';
+	    }
+	}
+	
+	
+	function setdebug(int){
+	    
+	    if(int == 1){
+	        displayDebugControl(0);
+	        document.getElementById("debug").style.display = "block";
+	    }else{
+	        displayDebugControl(1);
+	        document.getElementById("debug").style.display = "none";
+	    }
+	}
+
+
+	function clearconsole(int){
+	
+		var debug = document.getElementById("debug");
+		var sp = debug.getElementsByTagName("span");
+		var len = sp.length ;
+			
+		if(int == 0){
+			sp[3].parentNode.removeChild(sp[3]);
+		}else if(int==1 && len > 3){
+			var ind = len-1 ;
+			sp[ind].parentNode.removeChild(sp[ind]);
+		}else{
+			sp[3].parentNode.removeChild(sp[3]);
+			while (sp){
+                clearconsole(2);
+			}
+		}
+		
+	}
+
+	
+	function displaypanel(int){
+	    var setd = document.getElementById('setpanel') ;
+	    if(int == 1){
+	        setd.innerHTML = '<a href="#" onclick="javascript:setpanel(1); return false;">Show options</a>';
+	    }else{
+	        setd.innerHTML = '<a href="#" onclick="javascript:setpanel(0); return false;">Hide options</a>';
+	    }
+	}
+	
+	
+	function displayloading(){
+		
+		var load = document.getElementById("loading"); 	  
+		load.style.display = "block" ;
+		load.innerHTML = "Loading..." ;	
+			
+	}
+	
+	
+	function setpanel(int){
+	    
+	    if(int == 1){
+	        displaypanel(0);
+	        document.getElementById("panel").style.display = "block";
+	        document.getElementById("panel2").style.display = "block";
+	    }else{
+	        displaypanel(1);
+	        document.getElementById("panel").style.display = "none";
+	        document.getElementById("panel2").style.display = "none";
+	    }
+	}
+	
+
+	function mousepos(event){
+		var px = event.clientX;
+		var py = event.clientY;
+    	document.getElementById('mousex').innerHTML = px ;
+    	document.getElementById('mousey').innerHTML = py ;
+	}
+	
+	/*---------------------------------------------------------------------------------
+	* Mandeliter : fonction de calcul des différentes itérations du point (0, 0) 
+	               sous l'action du polynôme z^2 + c
+	
+	* In :  > cx : partie réelle de la constante du polynôme
+	        > cy : partie imaginaire de la constante du polynôme
+	        > maxiter : nombre maximal d'itérations
+	        
+	* Out : nombre d'itération après lequel le module du résultat dépasse 4
+	---------------------------------------------------------------------------------*/
+
+	
+	function Mandeliter(cx, cy, maxiter)
+	{
+	  var i;
+	  var x = 0;
+	  var y = 0;
+	 
+	  for (i = 0; i < maxiter && x*x + y*y <= 4; ++i)
+	  {
+	    var tmp = 2*x*y;
+	    x = x*x - y*y + cx;
+	    y = tmp + cy;
+	  }
+
+	  return i;
+	}
+
+
+	
+	</script>
+	
+	</body>
+	</html>
